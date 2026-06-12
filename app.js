@@ -11,12 +11,17 @@ const triggerArea = document.getElementById('triggerArea');
 const triggerBtn = document.getElementById('triggerBtn');
 const exportBtn = document.getElementById('exportBtn');
 const globalResetBtn = document.getElementById('globalResetBtn');
-const randomizeBtn = document.getElementById('randomizeBtn'); 
+const resetChannelBtn = document.getElementById('resetChannelBtn');
+const mutateBtn = document.getElementById('mutateBtn') || document.getElementById('randomizeBtn'); // Mutate butonu
 const vizPanel = document.getElementById('vizPanel');
 const signalAlert = document.getElementById('signalAlert');
 const lunarLog = document.getElementById('lunarLog');
 const vuL = document.getElementById('vuL');
 const vuR = document.getElementById('vuR');
+
+// Preset Paylaşım Butonları (Save & Load)
+const savePresetBtn = document.getElementById('savePresetBtn');
+const loadPresetBtn = document.getElementById('loadPresetBtn');
 
 // Master FX DOM
 const masterDriveSlider = document.getElementById('masterDrive');
@@ -33,6 +38,24 @@ const canvas = document.getElementById('analyzerCanvas');
 const ctx = canvas.getContext('2d');
 
 let gridOffset = 0;
+
+// Custom Pop-up (Modal) DOM Elemanları
+const lunarModal = document.getElementById('lunarModal');
+const modalCloseBtn = document.getElementById('modalCloseBtn');
+const modalCopyBtn = document.getElementById('modalCopyBtn');
+const sonicCodeDisplay = document.getElementById('sonicCodeDisplay');
+
+const lunarLoadModal = document.getElementById('lunarLoadModal');
+const modalLoadCloseBtn = document.getElementById('modalLoadCloseBtn');
+const modalSubmitLoadBtn = document.getElementById('modalSubmitLoadBtn');
+const sonicCodeInput = document.getElementById('sonicCodeInput');
+
+// --- MODAL KAPATMA MANTIĞI (DIŞARI TIKLAMA DAHİL) ---
+if (modalCloseBtn) modalCloseBtn.addEventListener('click', () => lunarModal.classList.add('hidden'));
+if (modalLoadCloseBtn) modalLoadCloseBtn.addEventListener('click', () => lunarLoadModal.classList.add('hidden'));
+
+if (lunarModal) lunarModal.addEventListener('click', (e) => { if(e.target === lunarModal) lunarModal.classList.add('hidden'); });
+if (lunarLoadModal) lunarLoadModal.addEventListener('click', (e) => { if(e.target === lunarLoadModal) lunarLoadModal.classList.add('hidden'); });
 
 // --- DİNAMİK SEKMEYE [LS] LOGOSU YAZMA MOTORU ---
 function generateFontalFavicon() {
@@ -97,6 +120,21 @@ const drumSpecs = {
         p1: ['CUTOFF', 300, 3500, 1200, 'Hz'], p2: ['RESONANCE', 1, 20, 8, 'Q'],
         p3: ['ENV_MOD', 0, 100, 50, '%'], p4: ['DECAY_TIME', 0.1, 2.0, 0.5, 's'],
         p5: ['PITCH_KEY', 40, 220, 65, 'Hz'], p6: ['ACCENT', 0, 100, 30, '%']
+    },
+    'crash': {
+        p1: ['HIGH_PASS', 2000, 6000, 3500, 'Hz'], p2: ['CRASH_DECAY', 0.5, 3.5, 1.6, 's'],
+        p3: ['BRIGHTNESS', 1, 10, 2, 'Q'], p4: ['VOLUME_GAIN', 10, 100, 50, '%'],
+        p5: ['BYPASS_1', 0, 1, 0, '_'], p6: ['BYPASS_2', 0, 1, 0, '_']
+    },
+    'zap_perc': {
+        p1: ['START_PITCH', 800, 3500, 2200, 'Hz'], p2: ['END_PITCH', 100, 600, 250, 'Hz'],
+        p3: ['SWEEP_TIME', 10, 120, 45, 'ms'], p4: ['ZAP_DECAY', 0.03, 0.25, 0.08, 's'],
+        p5: ['RESONANCE', 1, 15, 5, 'Q'], p6: ['SATURATION', 0, 100, 25, '%']
+    },
+    'riser': {
+        p1: ['START_PITCH', 100, 400, 140, 'Hz'], p2: ['END_PITCH', 800, 2500, 1600, 'Hz'],
+        p3: ['RISE_DURATION', 1.0, 8.0, 4.0, 's'], p4: ['NOISE_BLEND', 0, 100, 55, '%'],
+        p5: ['FILTER_CUTOFF', 2000, 10000, 6000, 'Hz'], p6: ['PUMP_SPEED', 0, 12, 0, 'Hz']
     }
 };
 
@@ -111,16 +149,11 @@ function logEvent(msg) {
 
 // --- BENZERSİZ SES İMZASI (PRESET HASH) MOTORU ---
 function generateSonicFingerprint(params) {
-    // Her parametre için sabit bir asal sayı çarpanı (Çakışmaları önlemek için)
     const weights = [3, 7, 13, 17, 23, 29];
     let total = 0;
-
-    // Parametreleri ağırlıklarıyla çarpıp topluyoruz
     params.forEach((val, idx) => {
         total += Math.abs(val) * (weights[idx] || 1);
     });
-
-    // Sonucu her zaman 5 haneli temiz bir sayıya sabitliyoruz (10000 - 99999 arası)
     const shortID = (Math.floor(total * 1337) % 90000) + 10000;
     return shortID;
 }
@@ -133,7 +166,8 @@ function initAudio() {
     analyser.fftSize = 512;
 
     globalGain = audioCtx.createGain();
-    globalGain.gain.setValueAtTime(0.35, audioCtx.currentTime);
+    // GÜNCELLEME: Canlı dinleme master seviyesi 0.35'ten 0.82'ye yükseltildi.
+    globalGain.gain.setValueAtTime(0.82, audioCtx.currentTime);
 
     masterWaveShaper = audioCtx.createWaveShaper();
     
@@ -219,46 +253,42 @@ document.getElementById('r-mdrive').onclick = () => { masterDriveSlider.value = 
 document.getElementById('r-mcrush').onclick = () => { masterCrushSlider.value = 0; currentCrushVal = 0; vMasterCrush.innerText = "OFF"; updateMasterFX(); logEvent("RESET_MASTER_CRUSH"); };
 document.getElementById('r-mcomp').onclick = () => { masterCompSlider.value = 20; updateMasterFX(); logEvent("RESET_MASTER_COMPRESSOR"); };
 
-randomizeBtn.addEventListener('click', () => {
-    if (!activeDrum) return;
-    const spec = drumSpecs[activeDrum];
-    const keys = Object.keys(spec);
-    
-    function logRandom(min, max) {
-        const logMin = Math.log(min <= 0 ? 0.01 : min);
-        const logMax = Math.log(max);
-        return Math.exp(logMin + Math.random() * (logMax - logMin));
-    }
+// --- AKILLI MUTASYON (MUTATE) MOTORU ---
+if (mutateBtn) {
+    mutateBtn.addEventListener('click', () => {
+        if (!activeDrum) return;
+        const spec = drumSpecs[activeDrum];
+        const keys = Object.keys(spec);
 
-    paramRows.forEach((row, idx) => {
-        const key = keys[idx];
-        if (!key) return;
-        const input = row.querySelector('input[type="range"]');
-        const valueSpan = row.querySelector('.param-value');
-        const data = spec[key];
+        paramRows.forEach((row, idx) => {
+            const key = keys[idx];
+            if (!key) return;
+            const input = row.querySelector('input[type="range"]');
+            const valueSpan = row.querySelector('.param-value');
+            const data = spec[key];
 
-        let min = data[1], max = data[2];
-        let newVal;
+            let min = data[1], max = data[2];
+            let currentVal = parseFloat(input.value);
+            
+            let range = max - min;
+            let mutationBound = range * 0.15; 
+            let change = (Math.random() * 2 - 1) * mutationBound;
+            let newVal = currentVal + change;
 
-        if (data[0].includes('DECAY') || data[0].includes('TIME') || data[0].includes('FREQ') || data[0].includes('PITCH') || data[0].includes('CUTOFF') || data[0].includes('FILTER')) {
-            newVal = logRandom(min, max);
-        } else {
-            newVal = Math.random() * (max - min) + min;
-        }
+            if (input.step === '0.01') {
+                newVal = parseFloat(newVal.toFixed(2));
+            } else {
+                newVal = Math.floor(newVal);
+            }
 
-        if (input.step === '0.01') {
-            newVal = parseFloat(newVal.toFixed(2));
-        } else {
-            newVal = Math.floor(newVal);
-        }
+            newVal = Math.max(min, Math.min(max, newVal));
+            input.value = newVal;
+            valueSpan.innerText = newVal + data[4];
+        });
 
-        newVal = Math.max(min, Math.min(max, newVal));
-        input.value = newVal;
-        valueSpan.innerText = newVal + data[4];
+        logEvent(`MUTATED_SIGNAL_${activeDrum.toUpperCase()}`);
     });
-
-    logEvent(`LOG_SMART_RANDOM_${activeDrum.toUpperCase()}`);
-});
+}
 
 globalResetBtn.addEventListener('click', () => {
     masterDriveSlider.value = 0;
@@ -267,9 +297,16 @@ globalResetBtn.addEventListener('click', () => {
     masterCompSlider.value = 20;
     vMasterCrush.innerText = "OFF";
     updateMasterFX();
-    if (activeDrum) loadDrumEngine(activeDrum);
-    logEvent("GLOBAL_HARD_RESET_EXECUTED");
 });
+
+if (resetChannelBtn) {
+    resetChannelBtn.addEventListener('click', () => {
+        if (activeDrum) {
+            loadDrumEngine(activeDrum); 
+            logEvent(`RESET_CHANNEL_${activeDrum.toUpperCase()}`);
+        }
+    });
+}
 
 drumButtons.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -278,7 +315,7 @@ drumButtons.forEach(btn => {
         btn.classList.add('active');
         activeDrum = btn.getAttribute('data-drum');
         logEvent(`MOUNTING_${activeDrum.toUpperCase()}`);
-        loadDrumEngine(activeDrum);
+        loadDrumEngine(activeDrum); 
     });
 });
 
@@ -338,6 +375,9 @@ function routeEngine(type, params, ctxTarget, outputNode, timeStart) {
         case 'open_hat': runOpenHat(params, ctxTarget, outputNode, timeStart); break;
         case 'sub_bass': runSubBass(params, ctxTarget, outputNode, timeStart); break;
         case 'acid_line': runAcidLine(params, ctxTarget, outputNode, timeStart); break;
+        case 'crash': runCrash(params, ctxTarget, outputNode, timeStart); break;
+        case 'zap_perc': runZapPerc(params, ctxTarget, outputNode, timeStart); break;
+        case 'riser': runRiser(params, ctxTarget, outputNode, timeStart); break;
     }
 }
 
@@ -364,61 +404,184 @@ triggerBtn.addEventListener('click', () => {
     routeEngine(activeDrum, p, audioCtx, globalGain, audioCtx.currentTime);
 });
 
-// --- DİNAMİK SÜRELİ EXPORT MOTORU ---
+// --- POP-UP DESTEKLİ DNA-CODE SAVE MOTORU ---
+if (savePresetBtn) {
+    savePresetBtn.addEventListener('click', () => {
+        if (!activeDrum) return;
+        
+        const p = Array.from(paramRows).map(row => {
+            const inp = row.querySelector('input[type="range"]');
+            return inp ? parseFloat(inp.value) : 0;
+        });
+        
+        const uniqueID = generateSonicFingerprint(p);
+        
+        const presetData = {
+            d: activeDrum,
+            p: p,
+            md: masterDriveSlider.value,
+            mc: masterCrushSlider.value,
+            animationComp: masterCompSlider.value
+        };
+        
+        const rawCode = btoa(JSON.stringify(presetData)).replace(/=/g, '');
+        const finalSonicCode = `LNR-${activeDrum.toUpperCase()}-${rawCode.slice(0, 18)}`;
+        
+        localStorage.setItem(`LUNAR_KEY_${finalSonicCode}`, JSON.stringify(presetData));
+        
+        if (sonicCodeDisplay) sonicCodeDisplay.value = finalSonicCode;
+        if (modalCopyBtn) modalCopyBtn.innerText = "[ COPY_CODE ]"; 
+        if (lunarModal) lunarModal.classList.remove('hidden');
+        
+        logEvent(`SAVED_PRESET_0x${uniqueID}`);
+    });
+}
+
+if (modalCopyBtn) {
+    modalCopyBtn.addEventListener('click', () => {
+        if (sonicCodeDisplay) {
+            sonicCodeDisplay.select();
+            navigator.clipboard.writeText(sonicCodeDisplay.value).then(() => {
+                modalCopyBtn.innerText = "[ COPIED! ]";
+                logEvent("DNA_CODE_COPIED_TO_CLIPBOARD");
+            });
+        }
+    });
+}
+
+// --- POP-UP DESTEKLİ LOAD MOTORU ---
+if (loadPresetBtn) {
+    loadPresetBtn.addEventListener('click', () => {
+        if (sonicCodeInput) sonicCodeInput.value = ""; 
+        if (lunarLoadModal) lunarLoadModal.classList.remove('hidden');
+        setTimeout(() => { if (sonicCodeInput) sonicCodeInput.focus(); }, 50); 
+    });
+}
+
+function executeLoadAction() {
+    if (!sonicCodeInput) return;
+    const cleanInput = sonicCodeInput.value.trim();
+    if (!cleanInput) return;
+    
+    let targetPreset = null;
+    
+    const localData = localStorage.getItem(`LUNAR_KEY_${cleanInput}`);
+    if (localData) {
+        targetPreset = JSON.parse(localData);
+    }
+    
+    if (!targetPreset) {
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            const parts = cleanInput.split("-");
+            const inputParts = parts[2] || parts[0];
+            if (inputParts && key.includes(inputParts)) {
+                targetPreset = JSON.parse(localStorage.getItem(key));
+                break;
+            }
+        }
+    }
+    
+    if (targetPreset) {
+        const targetBtn = document.querySelector(`.drum-type-btn[data-drum="${targetPreset.d}"]`);
+        
+        if (targetBtn) {
+            targetBtn.click(); 
+            
+            paramRows.forEach((row, idx) => {
+                const input = row.querySelector('input[type="range"]');
+                const valueSpan = row.querySelector('.param-value');
+                const spec = drumSpecs[targetPreset.d];
+                const key = Object.keys(spec)[idx];
+                
+                if (input && targetPreset.p[idx] !== undefined) {
+                    input.value = targetPreset.p[idx];
+                    valueSpan.innerText = input.value + spec[key][4];
+                }
+            });
+            
+            masterDriveSlider.value = targetPreset.md;
+            masterCrushSlider.value = targetPreset.mc;
+            currentCrushVal = parseFloat(targetPreset.mc);
+            masterCompSlider.value = targetPreset.animationComp || targetPreset.masterComp || 20;
+            
+            if (currentCrushVal == 0) {
+                vMasterCrush.innerText = "OFF";
+            } else {
+                const bits = Math.max(2, 16 - (currentCrushVal / 6.5));
+                vMasterCrush.innerText = `${bits.toFixed(1)} BIT`;
+            }
+            
+            updateMasterFX();
+            logEvent(`LOADED_PRESET_${targetPreset.d.toUpperCase()}`);
+            if (lunarLoadModal) lunarLoadModal.classList.add('hidden');
+        }
+    } else {
+        logEvent(`LOAD_FAILED_INVALID_CODE`);
+        alert("ERROR: Invalid or corrupt Lunar Sonic Code.");
+    }
+}
+
+if (modalSubmitLoadBtn) modalSubmitLoadBtn.addEventListener('click', executeLoadAction);
+if (sonicCodeInput) {
+    sonicCodeInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') executeLoadAction();
+    });
+}
+
+// --- GÜNCELLENEN EXPORT MOTORU (TAMAMEN DİNAMİK SÜRE VE GÜÇLÜ SES) ---
+// --- DEVASA GÜÇLÜ VE NORMALİZE EDİLMİŞ EXPORT MOTORU ---
+// --- EXPORT MOTORU (OFFLINE WAV RENDER) ---
+// --- EXPORT MOTORU (OFFLINE WAV RENDER) ---
 exportBtn.addEventListener('click', () => {
     if (!activeDrum) return;
 
-    // 1. Aktif parametre değerlerini topluyoruz
     const p = Array.from(paramRows).map(row => {
         const inp = row.querySelector('input[type="range"]');
         return inp ? parseFloat(inp.value) : 0;
     });
 
-    // 2. 5 haneli kısa sayısal kimliği üret
     const uniqueID = generateSonicFingerprint(p);
-    logEvent(`PREPARING_WAV_RENDER_//_ID_${uniqueID}`);
-
-    // 3. DİNAMİK SÜRE HESAPLAMA (Ses ne kadar uzunsa render o kadar sürer)
-    let decayValue = 1.0; // Default güvenli süre
-
-    if (activeDrum === '808') decayValue = p[2];          // DECAY_TIME
-    else if (activeDrum === 'kick') decayValue = p[2];     // KICK_DECAY
-    else if (activeDrum === 'snare') decayValue = p[2];    // CRISP_DECAY (Noise en uzun olanı)
-    else if (activeDrum === 'clap') decayValue = p[2];     // MAIN_DECAY
-    else if (activeDrum === 'closed_hat') decayValue = p[1];// HAT_DECAY
-    else if (activeDrum === 'open_hat') decayValue = p[1];  // OPEN_DECAY
-    else if (activeDrum === 'sub_bass') decayValue = p[3];  // SUB_DECAY
-    else if (activeDrum === 'acid_line') decayValue = p[3]; // DECAY_TIME
-
-    // Sesi tetikleme süresi + Decay süresi + 100ms dijital çıtlamayı önleme payı
-    const duration = Math.max(0.1, decayValue + 0.1); 
+    logEvent(`PREPARING_OFFLINE_WAV_RENDER_${uniqueID}`);
 
     const sampleRate = 44100;
+    
+    // --- DİNAMİK SÜRE HESAPLAMA (Boş sessizlik kaydetmesin diye) ---
+    let duration = 1.0; 
+    if (activeDrum === 'riser') {
+        duration = p[2] + 0.1;
+    } else if (p[2] !== undefined) {
+        duration = p[2] + 0.1; // Decay parametresini baz al
+    } else if (p[1] !== undefined) {
+        duration = p[1] + 0.1;
+    }
+    duration = Math.max(duration, 0.2); // Çok kısa kalmasını engelle
+
     const offlineCtx = new OfflineAudioContext(1, sampleRate * duration, sampleRate);
 
     const offlineGain = offlineCtx.createGain();
-    offlineGain.gain.setValueAtTime(0.45, 0); 
+    
+    // 🎯 CANLI SESİ OKU VE ÜZERİNE %18 TELAFİ ÇARPANI EKLE
+    const liveVolume = globalGain ? globalGain.gain.value : 0.82;
+    // Math.min(..., 0.98) ile sesin dijital tavanı aşmasını (clipping/patlama) engelliyoruz
+    const compensatedVolume = Math.min(liveVolume * 1.18, 0.98); 
+    offlineGain.gain.setValueAtTime(compensatedVolume, 0); 
 
     const offlineShaper = offlineCtx.createWaveShaper();
     const driveVal = parseFloat(masterDriveSlider.value);
-    if (driveVal > 0) {
-        let curve = new Float32Array(44100);
-        for (let i = 0; i < 44100; ++i) {
-            let x = (i * 2) / 44100 - 1;
-            curve[i] = ((3 + (driveVal * 2.5)) * x * 20 * (Math.PI / 180)) / (Math.PI + (driveVal * 2.5) * Math.abs(x));
-        }
-        offlineShaper.curve = curve;
-    }
+    // Canlıdaki distortion eğrisinin noktası virgülüne aynısı
+    offlineShaper.curve = driveVal > 0 ? makeDistortionCurve(driveVal * 2.5) : null; 
 
     const offlineComp = offlineCtx.createDynamicsCompressor();
     const compVal = parseFloat(masterCompSlider.value);
-    offlineComp.threshold.setValueAtTime(-compVal / 1.5, 0);
+    // Canlıdaki kompresör eşik formülünün birebir aynısı
+    offlineComp.threshold.setValueAtTime(-compVal / 1.5, 0); 
 
+    // Sinyal zincirini doğru sırayla birbirine bağlıyoruz
     offlineGain.connect(offlineShaper);
     offlineShaper.connect(offlineComp);
     offlineComp.connect(offlineCtx.destination);
 
-    // Sesi tam 0. saniyede tetikliyoruz
     routeEngine(activeDrum, p, offlineCtx, offlineGain, 0);
 
     offlineCtx.startRendering().then(renderedBuffer => {
@@ -426,12 +589,9 @@ exportBtn.addEventListener('click', () => {
         const url = URL.createObjectURL(wavBlob);
         const a = document.createElement('a');
         a.href = url;
-        
-        const prefix = activeDrum.toUpperCase() === 'CLOSED_HAT' ? 'HAT' : activeDrum.toUpperCase();
-        a.download = `LS${prefix}_${uniqueID}.wav`;
-        
+        a.download = `LUNAR_${activeDrum.toUpperCase()}_${uniqueID}.wav`;
         a.click();
-        logEvent(`WAV_EXPORT_SUCCESS_//_ID_${uniqueID}`);
+        logEvent(`WAV_SIGNAL_EXPORT_SUCCESS_${uniqueID}`);
     }).catch(err => {
         logEvent("EXPORT_ERROR_RENDER_FAILED");
     });
@@ -465,20 +625,17 @@ function bufferToWav(buffer) {
     return new Blob([bufferArr], { type: 'audio/wav' });
 }
 
-// --- SES MOTORU ALGOLARI ---
+// --- GÜNCELLEME: ENSTRÜMAN SES MOTORLARI GÜÇ SINIRLARI MAKSİMUMA ÇEKİLDİ ---
 function run808(p, c, g, now) {
     const osc = c.createOscillator(), gain = c.createGain(), filter = c.createBiquadFilter();
     osc.type = 'sine'; filter.type = 'lowpass'; filter.frequency.setValueAtTime(p[5], now);
     osc.connect(filter); filter.connect(gain); gain.connect(g);
-    
     const startFreq = Math.max(1, p[0]);
     const endFreq = Math.max(1, p[1]);
-    
     osc.frequency.setValueAtTime(startFreq, now);
     osc.frequency.linearRampToValueAtTime(endFreq, now + (p[4] / 1000));
-    
     gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.3, now + 0.005);
+    gain.gain.linearRampToValueAtTime(0.85, now + 0.005); // 0.3 -> 0.85 yapıldı (Yeri göğü titretecek)
     gain.gain.exponentialRampToValueAtTime(0.001, now + p[2]);
     osc.start(now); osc.stop(now + p[2]);
 }
@@ -487,12 +644,10 @@ function runKick(p, c, g, now) {
     const osc = c.createOscillator(), gain = c.createGain(), filter = c.createBiquadFilter();
     osc.type = 'sine'; filter.type = 'lowpass'; filter.frequency.setValueAtTime(p[5], now);
     osc.connect(filter); filter.connect(gain); gain.connect(g);
-    
     osc.frequency.setValueAtTime(p[0], now); 
     osc.frequency.linearRampToValueAtTime(p[1], now + (p[4] / 1000));
-    
     gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.4, now + 0.005);
+    gain.gain.linearRampToValueAtTime(0.95, now + 0.005); // 0.4 -> 0.95 yapıldı (Punch canavar oldu)
     gain.gain.exponentialRampToValueAtTime(0.001, now + p[2]);
     osc.start(now); osc.stop(now + p[2]);
 }
@@ -500,15 +655,12 @@ function runKick(p, c, g, now) {
 function runSnare(p, c, g, now) {
     const osc = c.createOscillator();
     const oscGain = c.createGain();
-    
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(p[0] * 2.5, now); 
     osc.frequency.exponentialRampToValueAtTime(p[0], now + 0.02);
     osc.frequency.linearRampToValueAtTime(80, now + p[3]);
-    
-    oscGain.gain.setValueAtTime((1 - (p[1] / 100)) * 0.4, now);
+    oscGain.gain.setValueAtTime((1 - (p[1] / 100)) * 0.85, now); // 0.4 -> 0.85
     oscGain.gain.exponentialRampToValueAtTime(0.001, now + p[3]);
-    
     osc.connect(oscGain);
     oscGain.connect(g);
 
@@ -516,26 +668,19 @@ function runSnare(p, c, g, now) {
     const buffer = c.createBuffer(1, bufSize, c.sampleRate);
     const data = buffer.getChannelData(0);
     for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
-    
     const noise = c.createBufferSource();
     noise.buffer = buffer;
-    
     const filter = c.createBiquadFilter();
     filter.type = 'highpass';
     filter.frequency.setValueAtTime(p[4], now);
-    
     const noiseGain = c.createGain();
-    noiseGain.gain.setValueAtTime((p[1] / 100) * 0.35, now);
+    noiseGain.gain.setValueAtTime((p[1] / 100) * 0.75, now); // 0.35 -> 0.75
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + p[2]);
-    
     noise.connect(filter);
     filter.connect(noiseGain);
     noiseGain.connect(g);
-
-    osc.start(now);
-    osc.stop(now + p[3]);
-    noise.start(now);
-    noise.stop(now + p[2]);
+    osc.start(now); osc.stop(now + p[3]);
+    noise.start(now); noise.stop(now + p[2]);
 }
 
 function runClap(p, c, g, now) {
@@ -546,10 +691,10 @@ function runClap(p, c, g, now) {
     const gain = c.createGain(); gain.gain.setValueAtTime(0, now);
     let tTime = now;
     for (let i = 0; i < p[3]; i++) {
-        gain.gain.setValueAtTime(0.22, tTime); gain.gain.exponentialRampToValueAtTime(0.01, tTime + (p[1] / 1000) * 0.8);
+        gain.gain.setValueAtTime(0.55, tTime); gain.gain.exponentialRampToValueAtTime(0.01, tTime + (p[1] / 1000) * 0.8); // 0.22 -> 0.55
         tTime += (p[1] / 1000);
     }
-    gain.gain.setValueAtTime(0.35, tTime); gain.gain.exponentialRampToValueAtTime(0.001, tTime + p[2]);
+    gain.gain.setValueAtTime(0.85, tTime); gain.gain.exponentialRampToValueAtTime(0.001, tTime + p[2]); // 0.35 -> 0.85
     source.connect(bpFilter); bpFilter.connect(gain); gain.connect(g);
     source.start(now); source.stop(tTime + p[2]);
 }
@@ -559,7 +704,7 @@ function runClosedHat(p, c, g, now) {
     for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
     const source = c.createBufferSource(); source.buffer = buffer;
     const filter = c.createBiquadFilter(); filter.type = 'highpass'; filter.frequency.setValueAtTime(p[0], now);
-    const gain = c.createGain(); gain.gain.setValueAtTime((p[3] / 100) * 0.25, now);
+    const gain = c.createGain(); gain.gain.setValueAtTime((p[3] / 100) * 0.70, now); // 0.25 -> 0.70
     gain.gain.exponentialRampToValueAtTime(0.001, now + p[1]);
     source.connect(filter); filter.connect(gain); gain.connect(g);
     source.start(now); source.stop(now + p[1]);
@@ -570,7 +715,7 @@ function runOpenHat(p, c, g, now) {
     for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
     const source = c.createBufferSource(); source.buffer = buffer;
     const filter = c.createBiquadFilter(); filter.type = 'highpass'; filter.frequency.setValueAtTime(p[0], now);
-    const gain = c.createGain(); gain.gain.setValueAtTime((p[3] / 100) * 0.25, now);
+    const gain = c.createGain(); gain.gain.setValueAtTime((p[3] / 100) * 0.75, now); // 0.25 -> 0.75
     gain.gain.exponentialRampToValueAtTime(0.001, now + p[1]);
     source.connect(filter); filter.connect(gain); gain.connect(g);
     source.start(now); source.stop(now + p[1]);
@@ -580,18 +725,15 @@ function runSubBass(p, c, g, now) {
     const osc = c.createOscillator(), gain = c.createGain(), filter = c.createBiquadFilter();
     osc.type = 'sine'; filter.type = 'lowpass'; filter.frequency.setValueAtTime(p[5], now);
     osc.connect(filter); filter.connect(gain); gain.connect(g);
-    
     const startFreq = Math.max(1, p[0]);
-
     if (p[1] > 0) {
         osc.frequency.setValueAtTime(Math.max(1, p[1]), now);
         osc.frequency.linearRampToValueAtTime(startFreq, now + (p[2] / 1000));
     } else {
         osc.frequency.setValueAtTime(startFreq, now);
     }
-    
     gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.3, now + 0.005);
+    gain.gain.linearRampToValueAtTime(0.85, now + 0.005); // 0.3 -> 0.85
     gain.gain.exponentialRampToValueAtTime(0.001, now + p[3]);
     osc.start(now); osc.stop(now + p[3]);
 }
@@ -603,11 +745,116 @@ function runAcidLine(p, c, g, now) {
     filter.frequency.setValueAtTime(p[0] + (p[5] * 10), now);
     filter.frequency.exponentialRampToValueAtTime(p[0], now + p[3]);
     osc.connect(filter); filter.connect(gain); gain.connect(g);
-    gain.gain.setValueAtTime(0.35, now);
+    gain.gain.setValueAtTime(0.80, now); // 0.35 -> 0.80
     gain.gain.exponentialRampToValueAtTime(0.001, now + p[3]);
     osc.start(now); osc.stop(now + p[3]);
 }
 
+function runCrash(p, c, g, now) {
+    const decay = p[1]; 
+    const bufSize = Math.floor(c.sampleRate * decay);
+    if (bufSize <= 0) return;
+    
+    const buffer = c.createBuffer(1, bufSize, c.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+    
+    const source = c.createBufferSource(); source.buffer = buffer;
+    
+    const hpFilter = c.createBiquadFilter(); 
+    hpFilter.type = 'highpass';
+    hpFilter.frequency.setValueAtTime(p[0], now); 
+    hpFilter.Q.setValueAtTime(p[2], now); 
+    
+    const gain = c.createGain();
+    const finalVol = (p[3] / 100) * 0.80; // 0.38 -> 0.80
+    
+    gain.gain.setValueAtTime(finalVol, now);
+    gain.gain.linearRampToValueAtTime(0.001, now + decay); 
+    
+    source.connect(hpFilter); hpFilter.connect(gain); gain.connect(g);
+    source.start(now); source.stop(now + decay);
+}
+
+function runZapPerc(p, c, g, now) {
+    const osc = c.createOscillator(), gain = c.createGain(), filter = c.createBiquadFilter();
+    osc.type = 'sawtooth';
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(p[0], now);
+    filter.Q.setValueAtTime(p[4], now);
+    
+    osc.frequency.setValueAtTime(p[0], now);
+    osc.frequency.exponentialRampToValueAtTime(p[1], now + (p[2] / 1000));
+    filter.frequency.exponentialRampToValueAtTime(p[1], now + (p[2] / 1000));
+    
+    gain.gain.setValueAtTime(0.85, now); // 0.48 -> 0.85
+    gain.gain.exponentialRampToValueAtTime(0.001, now + p[3]);
+    
+    if (p[5] > 0) {
+        const shaper = c.createWaveShaper();
+        let amt = p[5] * 2.2;
+        let curve = new Float32Array(44100);
+        for (let i = 0; i < 44100; ++i) {
+            let x = (i * 2) / 44100 - 1;
+            curve[i] = ((3 + amt) * x * 20 * (Math.PI / 180)) / (Math.PI + amt * Math.abs(x));
+        }
+        shaper.curve = curve;
+        osc.connect(shaper); shaper.connect(filter);
+    } else {
+        osc.connect(filter);
+    }
+    
+    filter.connect(gain); gain.connect(g);
+    osc.start(now); osc.stop(now + p[3]);
+}
+
+function runRiser(p, c, g, now) {
+    const duration = p[2]; 
+    const bufSize = Math.floor(c.sampleRate * duration);
+    const buffer = c.createBuffer(1, bufSize, c.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+    
+    const noise = c.createBufferSource(); noise.buffer = buffer;
+    const noiseGain = c.createGain();
+    const noiseFilter = c.createBiquadFilter();
+    noiseFilter.type = 'highpass';
+    noiseFilter.frequency.setValueAtTime(200, now);
+    noiseFilter.frequency.exponentialRampToValueAtTime(p[4], now + duration);
+    
+    const osc = c.createOscillator(), oscGain = c.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(p[0], now);
+    osc.frequency.linearRampToValueAtTime(p[1], now + duration);
+    
+    const mainGain = c.createGain();
+    mainGain.gain.setValueAtTime(0.001, now);
+    mainGain.gain.linearRampToValueAtTime(0.80, now + duration - 0.2); // 0.38 -> 0.80
+    mainGain.gain.linearRampToValueAtTime(0.001, now + duration);
+    
+    const noiseRatio = p[3] / 100;
+    noiseGain.gain.setValueAtTime(noiseRatio * 0.60, now); // 0.25 -> 0.60
+    noiseGain.gain.linearRampToValueAtTime(noiseRatio * 0.80, now + duration); // 0.35 -> 0.80
+    
+    oscGain.gain.setValueAtTime((1 - noiseRatio) * 0.65, now); // 0.22 -> 0.65
+    
+    noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(mainGain);
+    osc.connect(oscGain); oscGain.connect(mainGain);
+    mainGain.connect(g);
+    
+    if (p[5] > 0) {
+        const lfo = c.createOscillator(), lfoGain = c.createGain();
+        lfo.type = 'sine'; lfo.frequency.setValueAtTime(p[5], now);
+        lfoGain.gain.setValueAtTime(0.14, now);
+        lfo.connect(lfoGain); lfoGain.connect(mainGain.gain);
+        lfo.start(now); lfo.stop(now + duration);
+    }
+    
+    noise.start(now); noise.stop(now + duration);
+    osc.start(now); osc.stop(now + duration);
+}
+
+// --- GÖRSELLEŞTİRİCİ MOTORU ---
 let lastTime = 0;
 const fps = 30; 
 const interval = 1000 / fps;
@@ -651,10 +898,8 @@ function drawVisualizer(timestamp) {
     for (let i = 0; i < bufferLength; i++) {
         let barHeight = dataArrayFreq[i] * (canvas.height / 255) * 0.82;
         totalEnergy += dataArrayFreq[i];
-
         ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0.1, dataArrayFreq[i] / 255 * 0.75)})`;
         ctx.fillRect(x, canvas.height - barHeight, barWidth - 1.5, barHeight);
-
         x += barWidth;
     }
 
@@ -669,7 +914,6 @@ function drawVisualizer(timestamp) {
     for (let i = 0; i < bufferLength; i++) {
         const v = dataArrayTime[i] / 128.0;
         const y = (v * canvas.height / 2) + Math.sin(i * 0.04) * (avgEnergy * 0.06);
-        
         if (i === 0) ctx.moveTo(waveX, y); else ctx.lineTo(waveX, y);
         waveX += sliceWidth;
     }
