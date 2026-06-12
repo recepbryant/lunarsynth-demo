@@ -25,6 +25,8 @@
                     <button class="drum-type-btn" data-drum="clap">[04_RAW_CLAP]</button>
                     <button class="drum-type-btn" data-drum="closed_hat">[05_CL_HAT]</button>
                     <button class="drum-type-btn" data-drum="open_hat">[06_OP_HAT]</button>
+                    <button class="drum-type-btn" data-drum="crash">[07_CYMBAL_CRH]</button>
+                    <button class="drum-type-btn" data-drum="zap_perc">[08_ZAP_PERC]</button>
                 </div>
 
                 <div class="selector-header" style="margin-top: 25px;">
@@ -32,8 +34,9 @@
                     <span class="sys-status">OSC_ON</span>
                 </div>
                 <div class="btn-group">
-                    <button class="drum-type-btn" data-drum="sub_bass">[07_SUB_BASS]</button>
-                    <button class="drum-type-btn" data-drum="acid_line">[08_ACID_LINE]</button>
+                    <button class="drum-type-btn" data-drum="sub_bass">[9_SUB_BASS]</button>
+                    <button class="drum-type-btn" data-drum="acid_line">[10_ACID_LINE]</button>
+                    <button class="drum-type-btn" data-drum="riser">[11_FX_RISER]</button>
                 </div>
             </div>
             
@@ -53,12 +56,18 @@
             <div id="emptyState" class="empty-state">
                 // NO_MODULE_MOUNTED_SELECT_SOURCE
             </div>
-
-            <div id="moduleMetaActions" class="module-actions hidden">
-                <button id="randomizeBtn" class="randomize-action-btn">[ RANDOMIZE CURRENT CH. ]</button>
-            </div>
+<!-- 1. ÜSTÜNDEKİ BUTONLAR TEKRAR ORİJİNAL 3'LÜ MATRİS DÜZENİNDE -->
+<div id="moduleMetaActions" class="module-actions hidden">
+    <button id="randomizeBtn" class="randomize-action-btn">[ MUTATE_SIGNAL ]</button>
+    <button id="savePresetBtn" class="randomize-action-btn">[ SAVE_DNA ]</button>
+    <button id="loadPresetBtn" class="randomize-action-btn">[ LOAD_DNA ]</button>
+</div>
 
             <div id="paramControls" class="parameter-matrix hidden">
+                <div class="fx-header" style="margin-bottom: 15px;">
+        <span>// CHANNEL_PARAMETERS</span>
+        <button id="resetChannelBtn" class="global-reset-link">[RESET_CHANNEL]</button>
+    </div>
                 <div class="param-row">
                     <span class="param-label">CTRL_01</span>
                     <input type="range" id="p1">
@@ -146,6 +155,35 @@
             </div>
         </div>
     </div>
+
+<div id="lunarModal" class="modal hidden">
+    <div class="modal-content">
+        <span class="log-label">// EXPORT_SONIC_DNA</span>
+        <input type="text" id="sonicCodeDisplay" readonly>
+        
+        <p class="modal-instructions">
+            /// SYSTEM_GUIDE: Copy and save this unique sonic DNA sequence, or share it with another producer. 
+            When they open the project and paste this sequence into their<br>[ LOAD_PRESET ] interface, all your custom 
+            fader levels and Master FX configurations will be instantly injected into their matrix.
+        </p>
+
+        <div class="utility-grid">
+            <button id="modalCopyBtn">[ COPY_CODE ]</button>
+            <button id="modalCloseBtn" class="export-btn">[ CLOSE ]</button>
+        </div>
+    </div>
+</div>
+
+<div id="lunarLoadModal" class="modal hidden">
+    <div class="modal-content">
+        <span class="log-label">// ENTER_SONIC_DNA</span>
+        <input type="text" id="sonicCodeInput" placeholder="LNR-XXXX-...">
+        <div class="utility-grid">
+            <button id="modalSubmitLoadBtn">[ LOAD_CODE ]</button>
+            <button id="modalLoadCloseBtn" class="export-btn">[ CLOSE ]</button>
+        </div>
+    </div>
+</div>
 
     <script src="app.js"></script>
 </body>
