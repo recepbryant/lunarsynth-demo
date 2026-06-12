@@ -1,0 +1,313 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Doto', monospace;
+    font-weight: 500;
+    letter-spacing: 1px;
+}
+
+body {
+    background-color: #000000;
+    color: #ffffff;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+}
+
+.lunar-grid {
+    display: grid;
+    grid-template-columns: 260px 520px 1fr;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* SOL SEKTÖR */
+.drum-selector {
+    border-right: 1px solid #0d0d0d;
+    padding: 40px 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background-color: #000000;
+    height: 100vh;
+}
+
+.selector-scroll-area {
+    overflow-y: auto;
+    flex-grow: 1;
+    padding-right: 5px;
+}
+.selector-scroll-area::-webkit-scrollbar { width: 0px; }
+
+.selector-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #111111;
+    padding-bottom: 10px;
+}
+
+.selector-title {
+    font-size: 0.75rem;
+    color: #ffffff;
+    font-weight: 800;
+}
+
+.sys-status {
+    font-size: 0.65rem;
+    color: #888888;
+}
+
+.btn-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 15px;
+}
+
+.drum-type-btn {
+    background: none;
+    border: none;
+    color: #666666;
+    padding: 10px 0;
+    font-size: 0.8rem;
+    cursor: pointer;
+    text-align: left;
+    transition: color 0.1s ease;
+    width: 100%;
+    font-weight: 800;
+}
+
+.drum-type-btn:hover { color: #bbbbbb; }
+.drum-type-btn.active { color: #ffffff; }
+
+.lunar-log-container {
+    border-top: 1px dashed #111111;
+    padding-top: 20px;
+    margin-top: 15px;
+}
+
+.log-label {
+    font-size: 0.7rem;
+    color: #888888;
+    margin-bottom: 12px;
+    font-weight: 800;
+}
+
+.lunar-log {
+    font-size: 0.75rem;
+    color: #888888;
+    line-height: 1.7;
+    height: 110px;
+    overflow: hidden;
+}
+
+/* ORTA SEKTÖR */
+.control-panel {
+    border-right: 1px solid #0d0d0d;
+    padding: 40px 35px;
+    display: flex;
+    flex-direction: column;
+    background-color: #000000;
+}
+
+.lunar-header {
+    font-size: 0.85rem;
+    font-weight: 800;
+    border-bottom: 1px dashed #111111;
+    padding-bottom: 20px;
+    color: #ffffff;
+}
+
+.empty-state {
+    font-size: 0.75rem;
+    color: #222222;
+    text-align: center;
+    margin-top: 50px;
+}
+
+.module-actions {
+    margin-top: 20px;
+    display: flex;
+}
+
+.randomize-action-btn {
+    width: 100%;
+    background: none;
+    border: 1px dashed #222222;
+    color: #888888;
+    padding: 10px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.randomize-action-btn:hover {
+    color: #000000;
+    background-color: #ffffff;
+    border-color: #ffffff;
+}
+
+.parameter-matrix {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    margin-top: 25px;
+}
+
+.param-row, .master-row {
+    display: grid;
+    grid-template-columns: 120px 1fr 50px 35px;
+    align-items: center;
+    gap: 12px;
+}
+
+.param-label, .knob-label { 
+    font-size: 0.7rem; 
+    color: #888888; 
+    text-transform: uppercase;
+}
+
+.param-value, .knob-value { 
+    font-size: 0.7rem; 
+    color: #ffffff; 
+    text-align: right; 
+}
+
+.reset-btn, .global-reset-link {
+    background: none;
+    border: none;
+    color: #444444;
+    font-size: 0.7rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: color 0.1s ease;
+}
+.reset-btn:hover, .global-reset-link:hover { color: #ffffff; }
+.reset-btn { text-align: right; padding: 4px 0; }
+
+.master-fx-panel {
+    margin-top: auto;
+    border-top: 1px solid #111111;
+    padding-top: 30px;
+    margin-bottom: 25px;
+}
+
+.fx-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.7rem;
+    color: #ffffff;
+    font-weight: 800;
+    margin-bottom: 20px;
+}
+
+.master-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    background: #111111;
+    height: 1px;
+    outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 6px;
+    height: 10px;
+    background: #ffffff;
+    cursor: pointer;
+    border-radius: 0;
+}
+
+.trigger-area { margin-top: 5px; }
+.utility-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.trigger-area button {
+    width: 100%;
+    background: #ffffff;
+    border: 1px solid #ffffff;
+    color: #000000;
+    padding: 18px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+.trigger-area button:hover { background: #e5e5e5; }
+
+.trigger-area .export-btn {
+    background: #000000;
+    color: #ffffff;
+    border: 1px solid #222222;
+}
+.trigger-area .export-btn:hover { background: #111111; border-color: #ffffff; }
+
+/* SAĞ SEKTÖR */
+.visualizer-panel {
+    background-color: #000000;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.visualizer-meta {
+    padding: 40px 40px 20px 40px;
+    font-size: 0.7rem;
+    color: #666666;
+    display: flex;
+    justify-content: space-between;
+}
+
+.signal-alert.firing { color: #ffffff; font-weight: 800; }
+.canvas-wrapper {
+    flex-grow: 1;
+    display: flex;
+    position: relative;
+    width: 100%;
+    padding: 0 40px 40px 40px;
+}
+
+#analyzerCanvas {
+    flex-grow: 1;
+    height: 100%;
+    background-color: #000000;
+}
+
+.vu-meter-container {
+    width: 25px;
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0 10px 10px;
+}
+
+.vu-bar { width: 1px; height: 100%; background-color: #0d0d0d; position: relative; }
+.vu-fill {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 0%;
+    background-color: #ffffff;
+    opacity: 0.4;
+    transition: height 0.04s ease;
+}
+
+.hidden { display: none !important; }
+.shake { animation: screenShake 0.05s linear infinite; }
+@keyframes screenShake {
+    0% { transform: translate(0.5px, 0); }
+    50% { transform: translate(-0.5px, 0.5px); }
+    100% { transform: translate(0, 0); }
+}

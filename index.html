@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LUNAR SYNTH</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Doto:wght=300;500;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="lunar-grid">
+        <div class="drum-selector">
+            <div class="selector-scroll-area">
+                <div class="selector-header">
+                    <span class="selector-title">CORE_DRUMS</span>
+                    <span class="sys-status">SYS_ON</span>
+                </div>
+                <div class="btn-group">
+                    <button class="drum-type-btn" data-drum="808">[01_808_BASS]</button>
+                    <button class="drum-type-btn" data-drum="kick">[02_SUB_KICK]</button>
+                    <button class="drum-type-btn" data-drum="snare">[03_DIRTY_SNR]</button>
+                    <button class="drum-type-btn" data-drum="clap">[04_RAW_CLAP]</button>
+                    <button class="drum-type-btn" data-drum="closed_hat">[05_CL_HAT]</button>
+                    <button class="drum-type-btn" data-drum="open_hat">[06_OP_HAT]</button>
+                </div>
+
+                <div class="selector-header" style="margin-top: 25px;">
+                    <span class="selector-title">SYNTH_ENGINES</span>
+                    <span class="sys-status">OSC_ON</span>
+                </div>
+                <div class="btn-group">
+                    <button class="drum-type-btn" data-drum="sub_bass">[07_SUB_BASS]</button>
+                    <button class="drum-type-btn" data-drum="acid_line">[08_ACID_LINE]</button>
+                </div>
+            </div>
+            
+            <div class="lunar-log-container">
+                <div class="log-label">// SYSTEM_LOG_STREAM</div>
+                <div class="lunar-log" id="lunarLog">
+                    [SYSTEM_READY]<br>> AMBIENT_IDLE
+                </div>
+            </div>
+        </div>
+
+        <div class="control-panel">
+            <header class="lunar-header">
+                LUNAR_SYNTH // LAB_MATRIX_v1.0
+            </header>
+
+            <div id="emptyState" class="empty-state">
+                // NO_MODULE_MOUNTED_SELECT_SOURCE
+            </div>
+
+            <div id="moduleMetaActions" class="module-actions hidden">
+                <button id="randomizeBtn" class="randomize-action-btn">[ RANDOMIZE CURRENT CH. ]</button>
+            </div>
+
+            <div id="paramControls" class="parameter-matrix hidden">
+                <div class="param-row">
+                    <span class="param-label">CTRL_01</span>
+                    <input type="range" id="p1">
+                    <span class="param-value">--</span>
+                    <button class="reset-btn">[R]</button>
+                </div>
+                <div class="param-row">
+                    <span class="param-label">CTRL_02</span>
+                    <input type="range" id="p2">
+                    <span class="param-value">--</span>
+                    <button class="reset-btn">[R]</button>
+                </div>
+                <div class="param-row">
+                    <span class="param-label">CTRL_03</span>
+                    <input type="range" id="p3">
+                    <span class="param-value">--</span>
+                    <button class="reset-btn">[R]</button>
+                </div>
+                <div class="param-row">
+                    <span class="param-label">CTRL_04</span>
+                    <input type="range" id="p4">
+                    <span class="param-value">--</span>
+                    <button class="reset-btn">[R]</button>
+                </div>
+                <div class="param-row">
+                    <span class="param-label">CTRL_05</span>
+                    <input type="range" id="p5">
+                    <span class="param-value">--</span>
+                    <button class="reset-btn">[R]</button>
+                </div>
+                <div class="param-row">
+                    <span class="param-label">CTRL_06</span>
+                    <input type="range" id="p6">
+                    <span class="param-value">--</span>
+                    <button class="reset-btn">[R]</button>
+                </div>
+            </div>
+
+            <div class="master-fx-panel">
+                <div class="fx-header">
+                    <span>// GLOBAL_MASTER_FX</span>
+                    <button id="globalResetBtn" class="global-reset-link">[RESET_ALL_CHANNELS]</button>
+                </div>
+                <div class="master-grid">
+                    <div class="master-row">
+                        <span class="knob-label">DIST_DRIVE</span>
+                        <input type="range" id="masterDrive" min="0" max="100" value="0">
+                        <span class="knob-value" id="v-masterDrive">0%</span>
+                        <button class="reset-btn" id="r-mdrive">[R]</button>
+                    </div>
+                    <div class="master-row">
+                        <span class="knob-label">BIT_CRUSH</span>
+                        <input type="range" id="masterCrush" min="0" max="100" value="0">
+                        <span class="knob-value" id="v-masterCrush">OFF</span>
+                        <button class="reset-btn" id="r-mcrush">[R]</button>
+                    </div>
+                    <div class="master-row">
+                        <span class="knob-label">PUNCH_COMP</span>
+                        <input type="range" id="masterComp" min="0" max="100" value="20">
+                        <span class="knob-value" id="v-masterComp">20%</span>
+                        <button class="reset-btn" id="r-mcomp">[R]</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="trigger-area hidden" id="triggerArea">
+                <div class="utility-grid">
+                    <button id="triggerBtn">[ EXECUTE_SIGNAL ]</button>
+                    <button id="exportBtn" class="export-btn">[ EXPORT_WAV_SIGNAL ]</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="visualizer-panel" id="vizPanel">
+            <div class="visualizer-meta">
+                <span>ANALYSIS_DESK // WAVE_VU</span>
+                <span id="signalAlert" class="signal-alert">STATUS_OK</span>
+            </div>
+            <div class="canvas-wrapper">
+                <canvas id="analyzerCanvas"></canvas>
+                <div class="vu-meter-container">
+                    <div class="vu-bar"><div class="vu-fill" id="vuL"></div></div>
+                    <div class="vu-bar"><div class="vu-fill" id="vuR"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
