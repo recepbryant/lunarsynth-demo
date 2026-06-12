@@ -38,7 +38,22 @@ body {
     flex-grow: 1;
     padding-right: 5px;
 }
-.selector-scroll-area::-webkit-scrollbar { width: 0px; }
+.selector-scroll-area::-webkit-scrollbar {
+    width: 4px; /* Çok ince bir hat */
+}
+
+.selector-scroll-area::-webkit-scrollbar-track {
+    background: #000000;
+}
+
+.selector-scroll-area::-webkit-scrollbar-thumb {
+    background: #222222;
+    border-radius: 0;
+}
+
+.selector-scroll-area::-webkit-scrollbar-thumb:hover {
+    background: #555555;
+}
 
 .selector-header {
     display: flex;
@@ -69,18 +84,30 @@ body {
 .drum-type-btn {
     background: none;
     border: none;
-    color: #666666;
-    padding: 10px 0;
+    color: #555555;
+    padding: 10px 14px;
     font-size: 0.8rem;
     cursor: pointer;
     text-align: left;
-    transition: color 0.1s ease;
+    transition: all 0.15s ease;
     width: 100%;
     font-weight: 800;
+    border-left: 2px solid transparent;
 }
 
-.drum-type-btn:hover { color: #bbbbbb; }
-.drum-type-btn.active { color: #ffffff; }
+.drum-type-btn:hover {
+    color: #ffffff;
+    background-color: #111111;
+    border-left: 2px solid #555555;
+}
+
+/* Seçili olan modül tam kontrast sert kutuya dönüşür */
+.drum-type-btn.active {
+    color: #000000 !important;
+    background-color: #ffffff !important;
+    border-left: 2px solid #ffffff;
+    padding-left: 18px; /* Hafif içeri kayma animasyonu */
+}
 
 .lunar-log-container {
     border-top: 1px dashed #111111;
@@ -101,6 +128,22 @@ body {
     line-height: 1.7;
     height: 110px;
     overflow: hidden;
+    background-color: #050505;
+    border: 1px solid #111111;
+    padding: 10px;
+    font-family: 'Doto', monospace;
+}
+
+/* VU Meter dolgularının görünürlüğü */
+.vu-fill {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 0%;
+    background-color: #ffffff;
+    opacity: 0.7; /* Sinyal zıpladığında daha net görünür */
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+    transition: height 0.04s ease;
 }
 
 /* ORTA SEKTÖR */
@@ -215,17 +258,27 @@ input[type="range"] {
     -webkit-appearance: none;
     width: 100%;
     background: #111111;
-    height: 1px;
+    height: 4px; /* Kanal biraz daha kalınlaştı */
     outline: none;
+    border: 1px solid #222222;
+    border-radius: 0;
 }
 
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 6px;
-    height: 10px;
+    width: 10px; /* Donanım fader'ı gibi dikey blok */
+    height: 18px;
     background: #ffffff;
     cursor: pointer;
+    border: 1px solid #000000;
     border-radius: 0;
+    transition: background 0.1s ease, transform 0.1s ease;
+}
+
+/* Aktif etkileşim hissi */
+input[type="range"]::-webkit-slider-thumb:hover {
+    background: #aaaaaa;
+    transform: scaleX(1.1);
 }
 
 .trigger-area { margin-top: 5px; }
@@ -244,9 +297,14 @@ input[type="range"]::-webkit-slider-thumb {
     font-size: 0.8rem;
     font-weight: 800;
     cursor: pointer;
-    transition: background 0.1s ease;
+    transition: all 0.1s ease;
 }
-.trigger-area button:hover { background: #e5e5e5; }
+
+.trigger-area button:hover {
+    background: #000000;
+    color: #ffffff;
+    border-color: #ffffff;
+}
 
 .trigger-area .export-btn {
     background: #000000;
@@ -271,6 +329,8 @@ input[type="range"]::-webkit-slider-thumb {
     justify-content: space-between;
 }
 
+
+
 .signal-alert.firing { color: #ffffff; font-weight: 800; }
 .canvas-wrapper {
     flex-grow: 1;
@@ -280,10 +340,31 @@ input[type="range"]::-webkit-slider-thumb {
     padding: 0 40px 40px 40px;
 }
 
+.canvas-wrapper::after {
+    content: " ";
+    display: block;
+    position: absolute;
+    top: 0; left: 0; bottom: 0; right: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%);
+    background-size: 100% 4px;
+    z-index: 10;
+    pointer-events: none; /* JS tıklamalarını engellemez */
+    opacity: 0.8;
+}
+
 #analyzerCanvas {
     flex-grow: 1;
     height: 100%;
+    background: radial-gradient(circle at center, #080808 0%, #000000 100%); /* Tam düz siyah yerine merkezden dışa derinlik */
+}
+
+/* Sinyal ateşlendiğinde ekranın hafifçe parlaması için anlık geçiş yumuşatması */
+.visualizer-panel {
     background-color: #000000;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    transition: background-color 0.1s ease;
 }
 
 .vu-meter-container {
@@ -310,4 +391,79 @@ input[type="range"]::-webkit-slider-thumb {
     0% { transform: translate(0.5px, 0); }
     50% { transform: translate(-0.5px, 0.5px); }
     100% { transform: translate(0, 0); }
+}
+
+/* ========================================== */
+/*        LUNAR SYSTEM MODALS INTERFACE       */
+/* ========================================== */
+
+/* --- LUNAR MODAL SYSTEM --- */
+/* 3'lü Butonları Yan Yana Dizen Matrix Düzeni */
+.module-actions {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+}
+
+/* --- POP-UP (MODAL) SİSTEMİ TASARIMI --- */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+
+.modal-content {
+    background-color: #050505;
+    border: 1px solid #111111;
+    padding: 30px;
+    width: 460px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+}
+
+.modal-content input[type="text"] {
+    background: #111111;
+    border: 1px solid #222222;
+    color: #ffffff;
+    padding: 14px;
+    font-family: 'Doto', monospace;
+    font-size: 0.85rem;
+    width: 100%;
+    outline: none;
+    text-align: center;
+    letter-spacing: 2px;
+}
+
+/* Yeni Eklenen Kullanıcı Rehberi Tasarımı */
+.modal-instructions {
+    font-size: 0.65rem;
+    color: #666666;
+    line-height: 1.6;
+    border-left: 2px solid #222222;
+    padding-left: 12px;
+    margin: 5px 0;
+    text-align: left;
+}
+
+.modal-content button {
+    padding: 12px !important;
+    font-size: 0.75rem !important;
+}
+
+/* Matrisi yeniden 3 sütunlu kompakt haline getiriyoruz */
+.module-actions {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
 }
